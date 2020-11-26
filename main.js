@@ -1,7 +1,7 @@
 const http = require("http");
 const exec = require('child_process').exec;
 const secrets = require("./secrets.json");
-import crypto from "crypto";
+const crypto = require("crypto");
 
 const host = 'localhost';
 const port = 8000;

@@ -3,7 +3,7 @@ const exec = require('child_process').exec;
 const secrets = require("./secrets.json");
 const crypto = require("crypto");
 
-const host = 'localhost';
+const host = '0.0.0.0';
 const port = 8000;
 
 class ReturnHandler {

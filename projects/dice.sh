@@ -1,5 +1,5 @@
 #!/bin/bash
-'cd' '/proj/mg-games'
+'cd' '/apps/mg-games'
 'docker-compose' 'down'
 'git' 'pull'
 'docker-compose' 'build'

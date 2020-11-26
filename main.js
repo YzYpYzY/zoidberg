@@ -70,12 +70,12 @@ const requestListener = function (req, res) {
                     }
                     break;
                 case 'cv':
-                    if(validateIntegrity(req, secrets['cv']) && checkBranch(req.body.ref, 'master')){
+                    //if(validateIntegrity(req, secrets['cv']) && checkBranch(req.body.ref, 'master')){
                         execScript('cv.sh');
                         returnHandler.end(200,'cv reloaded');
-                    } else {
-                        returnHandler.end(500, "unauthorize");
-                    }
+                    // } else {
+                    //     returnHandler.end(500, "unauthorize");
+                    // }
                     break;
                 default:
                     returnHandler.end(404,'project not found');

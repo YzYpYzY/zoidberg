@@ -61,13 +61,13 @@ const requestListener = function (req, res) {
     const urlParts = treatUrl(req.url);
     if(req.method === "POST"){
         var requestBody = '';
-        request.on('data', function(data) {
+        req.on('data', function(data) {
             requestBody += data;
             if(requestBody.length > 1e7) {
                 returnHandler.end(413, 'Request Entity Too Large');
             }
         });
-        request.on('end', function() {
+        req.on('end', function() {
             var body = qs.parse(requestBody);
             treatPostRequest(urlParts, body);
         });

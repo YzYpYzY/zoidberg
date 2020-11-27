@@ -35,15 +35,13 @@ const execScript = (scriptName) => {
     });
 }
 
-const validateIntegrity = (request, body, secret) => {
+const validateIntegrity = (signature, body, secret) => {
         // calculate the signature
     const expectedSignature = "sha1=" +
     crypto.createHmac("sha1", secret)
         .update(JSON.stringify(body))
         .digest("hex");
 
-    // compare the signature against the one in the request
-    const signature = request.headers["x-hub-signature"];
     if (signature !== expectedSignature) {
         return false;
     }
@@ -67,21 +65,21 @@ const requestListener = function (req, res) {
             }
         });
         req.on('end', function() {
-            var body = qs.parse(requestBody);
-            treatPostRequest(urlParts, body);
+            var body = JSON.parse(requestBody);
+            treatPostRequest(req.headers, urlParts, body, returnHandler);
         });
     } else {
-        treatGetRequest(urlParts);
+        treatGetRequest(urlParts, returnHandler);
     }
 
 };
 
-const treatPostRequest = (urlParts, body) => {
+const treatPostRequest = (headers, urlParts, body, returnHandler) => {
     switch(urlParts[0]){
         case "reload":
             switch(urlParts[1]){
                 case 'dice':
-                    if(validateIntegrity(req, body, secrets['dice']) && checkBranch(body.ref, 'master')){
+                    if(validateIntegrity(headers["x-hub-signature"], body, secrets['dice']) && checkBranch(body.ref, 'master')){
                         execScript('dice.sh');
                         returnHandler.end(200,'dice reloaded');
                     } else {
@@ -89,7 +87,7 @@ const treatPostRequest = (urlParts, body) => {
                     }
                     break;
                 case 'cv':
-                    if(validateIntegrity(req, body, secrets['cv']) && checkBranch(body.ref, 'master')){
+                    if(validateIntegrity(headers["x-hub-signature"], body, secrets['cv']) && checkBranch(body.ref, 'master')){
                         execScript('cv.sh');
                         returnHandler.end(200,'cv reloaded');
                     } else {
@@ -104,7 +102,7 @@ const treatPostRequest = (urlParts, body) => {
             returnHandler.end(404,'Resource not found');
     }
 }
-const treatGetRequest = (urlParts) => {
+const treatGetRequest = (urlParts, returnHandler) => {
     switch(urlParts[0]){
         case "ping":
             returnHandler.end(200,'pong');

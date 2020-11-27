@@ -8,7 +8,6 @@ const host = '0.0.0.0';
 const port = 8000;
 
 class ReturnHandler {
-    
     constructor(res){
         res.setHeader("Content-Type", "application/json");
         this.res = res;
@@ -29,7 +28,7 @@ const treatUrl = (url) => {
 const execScript = (scriptName) => {
     const myShellScript = exec('./projects/'+ scriptName);
     myShellScript.stdout.on('data', (data)=>{
-        console.log(data); 
+        console.log(data);
     });
     myShellScript.stderr.on('data', (data)=>{
         console.error(data);

@@ -2,6 +2,7 @@ const http = require("http");
 const exec = require('child_process').exec;
 const secrets = require("./secrets.json");
 const crypto = require("crypto");
+var qs = require('querystring');
 
 const host = '0.0.0.0';
 const port = 8000;
@@ -35,11 +36,11 @@ const execScript = (scriptName) => {
     });
 }
 
-const validateIntegrity = (request, secret) => {
+const validateIntegrity = (request, body, secret) => {
         // calculate the signature
     const expectedSignature = "sha1=" +
     crypto.createHmac("sha1", secret)
-        .update(JSON.stringify(request.body))
+        .update(JSON.stringify(body))
         .digest("hex");
 
     // compare the signature against the one in the request
@@ -58,11 +59,30 @@ const checkBranch = (ref, branchName) => {
 const requestListener = function (req, res) {
     const returnHandler = new ReturnHandler(res);
     const urlParts = treatUrl(req.url);
+    if(req.method === "POST"){
+        var requestBody = '';
+        request.on('data', function(data) {
+            requestBody += data;
+            if(requestBody.length > 1e7) {
+                returnHandler.end(413, 'Request Entity Too Large');
+            }
+        });
+        request.on('end', function() {
+            var body = qs.parse(requestBody);
+            treatPostRequest(urlParts, body);
+        });
+    } else {
+        treatGetRequest(urlParts);
+    }
+
+};
+
+const treatPostRequest = (urlParts, body) => {
     switch(urlParts[0]){
         case "reload":
             switch(urlParts[1]){
                 case 'dice':
-                    if(validateIntegrity(req, secrets['dice']) && checkBranch(req.body.ref, 'master')){
+                    if(validateIntegrity(req, body, secrets['dice']) && checkBranch(body.ref, 'master')){
                         execScript('dice.sh');
                         returnHandler.end(200,'dice reloaded');
                     } else {
@@ -70,7 +90,7 @@ const requestListener = function (req, res) {
                     }
                     break;
                 case 'cv':
-                    if(validateIntegrity(req, secrets['cv']) && checkBranch(req.body.ref, 'master')){
+                    if(validateIntegrity(req, body, secrets['cv']) && checkBranch(body.ref, 'master')){
                         execScript('cv.sh');
                         returnHandler.end(200,'cv reloaded');
                     } else {
@@ -81,13 +101,19 @@ const requestListener = function (req, res) {
                     returnHandler.end(404,'project not found');
             }
             break
+        default:
+            returnHandler.end(404,'Resource not found');
+    }
+}
+const treatGetRequest = (urlParts) => {
+    switch(urlParts[0]){
         case "ping":
             returnHandler.end(200,'pong');
             break
         default:
             returnHandler.end(404,'Resource not found');
     }
-};
+}
 
 const server = http.createServer(requestListener);
 server.listen(port, host, () => {

@@ -2,20 +2,19 @@ const http = require("http");
 const exec = require('child_process').exec;
 const secrets = require("./secrets.json");
 const crypto = require("crypto");
-var qs = require('querystring');
 
-const host = '0.0.0.0';
-const port = 8000;
+const host = process.env.HOST || '0.0.0.0';
+const port = process.env.PORT || 8000;
 
 class ReturnHandler {
-    constructor(res){
+    constructor(res) {
         res.setHeader("Content-Type", "application/json");
         this.res = res;
     }
 
-    end(code, message){
+    end(code, message) {
         this.res.writeHead(code);
-        this.res.end(JSON.stringify({message}));
+        this.res.end(JSON.stringify({ message }));
     }
 }
 
@@ -26,21 +25,21 @@ const treatUrl = (url) => {
 }
 
 const execScript = (scriptName) => {
-    const myShellScript = exec('./projects/'+ scriptName);
-    myShellScript.stdout.on('data', (data)=>{
+    const myShellScript = exec('./projects/' + scriptName);
+    myShellScript.stdout.on('data', (data) => {
         console.log(data);
     });
-    myShellScript.stderr.on('data', (data)=>{
+    myShellScript.stderr.on('data', (data) => {
         console.error(data);
     });
 }
 
 const validateIntegrity = (signature, body, secret) => {
-        // calculate the signature
+    // calculate the signature
     const expectedSignature = "sha1=" +
-    crypto.createHmac("sha1", secret)
-        .update(JSON.stringify(body))
-        .digest("hex");
+        crypto.createHmac("sha1", secret)
+            .update(JSON.stringify(body))
+            .digest("hex");
 
     if (signature !== expectedSignature) {
         return false;
@@ -56,15 +55,15 @@ const checkBranch = (ref, branchName) => {
 const requestListener = function (req, res) {
     const returnHandler = new ReturnHandler(res);
     const urlParts = treatUrl(req.url);
-    if(req.method === "POST"){
+    if (req.method === "POST") {
         var requestBody = '';
-        req.on('data', function(data) {
+        req.on('data', function (data) {
             requestBody += data;
-            if(requestBody.length > 1e7) {
+            if (requestBody.length > 1e7) {
                 returnHandler.end(413, 'Request Entity Too Large');
             }
         });
-        req.on('end', function() {
+        req.on('end', function () {
             var body = JSON.parse(requestBody);
             treatPostRequest(req.headers, urlParts, body, returnHandler);
         });
@@ -75,40 +74,40 @@ const requestListener = function (req, res) {
 };
 
 const treatPostRequest = (headers, urlParts, body, returnHandler) => {
-    switch(urlParts[0]){
+    switch (urlParts[0]) {
         case "reload":
-            switch(urlParts[1]){
+            switch (urlParts[1]) {
                 case 'dice':
-                    if(validateIntegrity(headers["x-hub-signature"], body, secrets['dice']) && checkBranch(body.ref, 'master')){
+                    if (validateIntegrity(headers["x-hub-signature"], body, secrets['dice']) && checkBranch(body.ref, 'master')) {
                         execScript('dice.sh');
-                        returnHandler.end(200,'dice reloaded');
+                        returnHandler.end(200, 'dice reloaded');
                     } else {
                         returnHandler.end(500, "unauthorize");
                     }
                     break;
                 case 'cv':
-                    if(validateIntegrity(headers["x-hub-signature"], body, secrets['cv']) && checkBranch(body.ref, 'master')){
+                    if (validateIntegrity(headers["x-hub-signature"], body, secrets['cv']) && checkBranch(body.ref, 'master')) {
                         execScript('cv.sh');
-                        returnHandler.end(200,'cv reloaded');
+                        returnHandler.end(200, 'cv reloaded');
                     } else {
                         returnHandler.end(500, "unauthorize");
                     }
                     break;
                 default:
-                    returnHandler.end(404,'project not found');
+                    returnHandler.end(404, 'project not found');
             }
             break
         default:
-            returnHandler.end(404,'Resource not found');
+            returnHandler.end(404, 'Resource not found');
     }
 }
 const treatGetRequest = (urlParts, returnHandler) => {
-    switch(urlParts[0]){
+    switch (urlParts[0]) {
         case "ping":
-            returnHandler.end(200,'pong');
+            returnHandler.end(200, 'pong');
             break
         default:
-            returnHandler.end(404,'Resource not found');
+            returnHandler.end(404, 'Resource not found');
     }
 }
 

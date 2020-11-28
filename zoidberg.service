@@ -1,0 +1,15 @@
+[Unit]
+Description="Zoidberg"
+
+[Service]
+ExecStart=/usr/bin/node main.js
+WorkingDirectory=/apps/zoidberg
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=Zoidberg
+Environment=HOST="0.0.0.0" PORT=8000
+
+[Install]
+WantedBy=multi-user.target

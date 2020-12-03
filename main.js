@@ -5,6 +5,8 @@ const crypto = require("crypto");
 
 const host = process.env.HOST || '0.0.0.0';
 const port = process.env.PORT || 8000;
+const secret = process.env.SECRET;
+
 
 class ReturnHandler {
     constructor(res) {
@@ -14,34 +16,38 @@ class ReturnHandler {
 
     end(code, message) {
         this.res.writeHead(code);
+        console.log('[' + code + '] ' + message);
         this.res.end(JSON.stringify({ message }));
     }
 }
 
 const treatUrl = (url) => {
     const cleanedUrl = url.slice(1, url.length);
-    console.log(cleanedUrl);
     return cleanedUrl.split('/');
 }
 
 const execScript = (scriptName) => {
-    const myShellScript = exec('./projects/' + scriptName);
+    const myShellScript = exec('./scripts/' + scriptName);
     myShellScript.stdout.on('data', (data) => {
-        console.log(data);
+        console.log(scriptName + " : " + data);
     });
     myShellScript.stderr.on('data', (data) => {
-        console.error(data);
+        console.error(scriptName + " (error) : " + data);
     });
 }
 
-const validateIntegrity = (signature, body, secret) => {
-    // calculate the signature
+const validateIntegrity = (signature, body) => {
+    if (secret === undefined) {
+        console.log('error : secret is missing.')
+        return false;
+    }
     const expectedSignature = "sha1=" +
         crypto.createHmac("sha1", secret)
             .update(JSON.stringify(body))
             .digest("hex");
 
     if (signature !== expectedSignature) {
+        console.log('warning : integrity check fail.')
         return false;
     }
     return true;
@@ -53,6 +59,7 @@ const checkBranch = (ref, branchName) => {
 }
 
 const requestListener = function (req, res) {
+    console.log('[' + req.method + '] ' + req.url);
     const returnHandler = new ReturnHandler(res);
     const urlParts = treatUrl(req.url);
     if (req.method === "POST") {
@@ -60,15 +67,17 @@ const requestListener = function (req, res) {
         req.on('data', function (data) {
             requestBody += data;
             if (requestBody.length > 1e7) {
-                returnHandler.end(413, 'Request Entity Too Large');
+                returnHandler.end(413, 'warning : request Entity Too Large');
             }
         });
         req.on('end', function () {
             var body = JSON.parse(requestBody);
             treatPostRequest(req.headers, urlParts, body, returnHandler);
         });
-    } else {
+    } else if (req.method === "GET") {
         treatGetRequest(urlParts, returnHandler);
+    } else {
+        returnHandler.end(413, 'warning : request method not supported');
     }
 
 };
@@ -76,43 +85,34 @@ const requestListener = function (req, res) {
 const treatPostRequest = (headers, urlParts, body, returnHandler) => {
     switch (urlParts[0]) {
         case "reload":
-            switch (urlParts[1]) {
-                case 'dice':
-                    if (validateIntegrity(headers["x-hub-signature"], body, secrets['dice']) && checkBranch(body.ref, 'master')) {
-                        execScript('dice.sh');
-                        returnHandler.end(200, 'dice reloaded');
-                    } else {
-                        returnHandler.end(500, "unauthorize");
-                    }
-                    break;
-                case 'cv':
-                    if (validateIntegrity(headers["x-hub-signature"], body, secrets['cv']) && checkBranch(body.ref, 'master')) {
-                        execScript('cv.sh');
-                        returnHandler.end(200, 'cv reloaded');
-                    } else {
-                        returnHandler.end(500, "unauthorize");
-                    }
-                    break;
-                default:
-                    returnHandler.end(404, 'project not found');
+            const projectInfos = projects.find(p => p.name === urlParts[1]);
+            if (projectInfos === undefined) {
+                returnHandler.end(404, 'project not found');
             }
-            break
+            if (validateIntegrity(headers["x-hub-signature"], body) && checkBranch(body.ref, projectInfos.branchName)) {
+                execScript(projectInfos.scriptName);
+                returnHandler.end(200, projectInfos.name + ' reloaded');
+            } else {
+                returnHandler.end(500, "unauthorize");
+            }
+            break;
         default:
-            returnHandler.end(404, 'Resource not found');
+            returnHandler.end(404, 'resource not found');
     }
 }
+
 const treatGetRequest = (urlParts, returnHandler) => {
     switch (urlParts[0]) {
         case "ping":
             returnHandler.end(200, 'pong');
             break
         default:
-            returnHandler.end(404, 'Resource not found');
+            returnHandler.end(404, 'resource not found');
     }
 }
 
 const server = http.createServer(requestListener);
 server.listen(port, host, () => {
-    console.log(`Server is running on http://${host}:${port}`);
+    console.log(`Zoidberg is running on http://${host}:${port}`);
 });
 

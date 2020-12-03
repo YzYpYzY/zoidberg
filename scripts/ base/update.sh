@@ -1,5 +1,4 @@
 #!/bin/bash
-'cd' '/apps/cv'
 'docker-compose' 'down'
 'git' 'pull'
 'docker-compose' 'build'

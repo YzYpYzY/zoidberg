@@ -1,25 +1,32 @@
 # Zoidberg
 
-Keep CI Simple !
+GitHub projects to your server in a second !
 
 # Installation
 1. Clone source on server (ex: /apps/zoidberg)
-2. Put zoidberg.service in place.
-```bash
-sudo cp zoidberg.service /etc/systemd/system/zoidberg.service
-````
-3. Activate the service
-```bash
-sudo systemctl enable zoidberg
-````
-4. Start the service
-```bash
-sudo systemctl start zoidberg
-````
-5. Open host port
-```bash
-sudo ufw allow 8000
-````
+2. Clone your zoidberg-conf in the zoidberg folder (ex: /apps/zoidberg)
+3. Put zoidberg.service in place.
+
+    **Automatic path**
+    ```bash
+    sh ./service/service-install.sh
+    ````
+    **Manual path**
+    ```bash
+    sudo cp service/zoidberg.service /etc/systemd/system/zoidberg.service
+    ````
+    3. Activate the service
+    ```bash
+    sudo systemctl enable zoidberg
+    ````
+    4. Start the service
+    ```bash
+    sudo systemctl start zoidberg
+    ````
+    5. Open host port
+    ```bash
+    sudo ufw allow 8000
+    ````
 
 ## Tips 
 Change default host and port.

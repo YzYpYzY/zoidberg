@@ -16,5 +16,10 @@
   "bugs": {
     "url": "https://github.com/YzYpYzY/zoidberg/issues"
   },
-  "homepage": "https://github.com/YzYpYzY/zoidberg#readme"
+  "homepage": "https://github.com/YzYpYzY/zoidberg#readme",
+  "devDependencies": {
+    "@types/node": "^14.14.10",
+    "ts-node": "^9.1.0",
+    "typescript": "^4.1.2"
+  }
 }
